@@ -5,3 +5,4 @@ data/*.local.json
 *.docx
 *.lnk
 .DS_Store
+dist/

@@ -222,11 +222,31 @@ ${ws}
     const html = `<!doctype html><html><head><meta charset="utf-8"><title>Program Status Report — ${U.esc(prog || 'All Programs')}</title><style>body{margin:0;font-family:Inter,Segoe UI,Arial,sans-serif}${css}</style></head><body>${X.reportHtml(prog)}</body></html>`;
     U.download(`Program_Status_Report_${(prog || 'All').replace(/[^A-Za-z0-9]+/g, '_')}_${U.today()}.html`, html, 'text/html');
   };
+  /** Single-file build: download a copy of this page with the current data embedded, ready to upload to SharePoint. */
+  X.publishHtml = () => {
+    if (!E.PRISTINE_HTML) return UI.toast('Save-as-HTML is available in the single-file (SharePoint) build.', true);
+    const snapshotAt = new Date().toISOString();
+    const payload = { name: (E.LOCAL_WORKSPACE || {}).name || 'Engineering Changes', user: '', snapshotAt, publishedBy: S.user(), changes: S.changes };
+    const json = JSON.stringify(payload).replace(/</g, '\\u003c');
+    const html = E.PRISTINE_HTML.replace(/(<script id="ecm-data" type="application\/json">)[\s\S]*?(<\/script>)/, (m, a, b) => a + json + b);
+    U.download(E.FILE_NAME || 'ECM_Command_Center.html', html, 'text/html');
+    // this browser now matches the file being published
+    if (E.LOCAL_WORKSPACE) E.LOCAL_WORKSPACE.snapshotAt = snapshotAt;
+    S.meta.fileSnapshot = snapshotAt;
+    S.save();
+    UI.dialog({
+      title: 'HTML file saved',
+      body: `<p style="margin-top:0">Downloaded <b>${U.esc(E.FILE_NAME || 'ECM_Command_Center.html')}</b> with all ${S.changes.length} records as of now.</p>
+        <ol style="padding-left:18px;color:var(--text-2);line-height:1.7"><li>In the SharePoint library, select the existing file → <b>Replace</b> (or upload and overwrite).</li><li>Everyone who opens the new file gets this data. Their own unpublished edits are kept as a backup in their browser.</li></ol>`,
+      foot: '<button class="btn primary" data-action="closeDialog">Done</button>',
+    });
+  };
+  E.act.publishHtml = () => X.publishHtml();
   E.act.report = () => X.openReport();
   E.act.backup = () => X.backup();
   E.act.restore = () => X.restore();
   E.act.resetDemo = () =>
-    UI.confirm('Reset all data to the demonstration dataset? All local edits will be lost. Consider downloading a backup first.', () => {
+    UI.confirm(S.workspace === 'local' ? 'Discard your edits in this browser and reload the records from the file?' : 'Reset all data to the demonstration dataset? All local edits will be lost. Consider downloading a backup first.', () => {
       E.store.reset();
       UI.toast('Demonstration data restored');
     }, 'Reset Data', true);

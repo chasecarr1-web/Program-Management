@@ -54,6 +54,7 @@
         <div class="sidebar-foot">
           <div><span class="dot" style="${S.storageOk ? '' : 'background:var(--red)'}"></span>${S.storageOk ? 'Saved locally' : 'Storage unavailable — changes not persisted'}</div>
           <div style="margin-top:6px">${S.changes.length} records · v${C.APP_VERSION}</div>
+          ${E.PRISTINE_HTML ? `<button class="btn sm primary" style="margin-top:8px;width:100%;justify-content:center" data-action="publishHtml" title="Download this page with current data, then Replace the file on SharePoint">${UI.icon('upload')} Save HTML for SharePoint</button>` : ''}
           <div style="margin-top:8px;display:flex;gap:4px;flex-wrap:wrap">
             <button class="btn xs" data-action="backup" title="Download JSON backup">${UI.icon('download')} Backup</button>
             <button class="btn xs" data-action="restore" title="Restore from JSON backup">${UI.icon('upload')} Restore</button>
@@ -191,6 +192,15 @@
     S.onChange(() => App.render());
     window.addEventListener('hashchange', route);
     route();
+    if (S.workspace === 'local' && /^(Local User|)$/.test(S.meta.user || '')) {
+      UI.dialog({
+        title: 'Who is using the command center?',
+        body: '<p class="muted" style="margin-top:0">Your name is recorded on every change you make (approvals, status updates, comments) for the audit trail. It is stored only in this browser.</p><label class="fld"><span>Your name</span><input class="inp" id="new-user" placeholder="e.g. J. Smith"/></label>',
+        foot: '<button class="btn primary" data-action="setUser">Continue</button>',
+        onMount: (ov) => ov.querySelector('#new-user').addEventListener('keydown', (e) => e.key === 'Enter' && E.act.setUser()),
+      });
+    }
+    if (S.fileUpdated) UI.toast('Loaded the latest published data from this file. Your previous browser copy was kept as a backup.');
   };
 
   document.addEventListener('DOMContentLoaded', App.init);

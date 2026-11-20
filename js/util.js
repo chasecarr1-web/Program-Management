@@ -1,6 +1,10 @@
 /* Core utilities: dates, formatting, DOM helpers, deterministic RNG */
 window.ECM = window.ECM || {};
 (function (E) {
+  // Single-file (SharePoint) build: keep an untouched copy of the page so it can re-save itself with new data.
+  document.addEventListener('DOMContentLoaded', () => {
+    if (document.getElementById('ecm-data')) E.PRISTINE_HTML = '<!doctype html>\n' + document.documentElement.outerHTML;
+  });
   const U = (E.U = {});
 
   U.pad = (n) => String(n).padStart(2, '0');

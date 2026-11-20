@@ -13,7 +13,7 @@
   // and 'local' (records from data/*.local.js — never committed to source control).
   S.storageOk = true;
   S.workspaces = () => {
-    const w = [{ key: 'demo', name: 'Demo (sample data)' }];
+    const w = E.LOCAL_WORKSPACE && E.HIDE_DEMO ? [] : [{ key: 'demo', name: 'Demo (sample data)' }];
     if (E.LOCAL_WORKSPACE) w.unshift({ key: 'local', name: E.LOCAL_WORKSPACE.name });
     return w;
   };
@@ -33,6 +33,16 @@
     } catch (e) {
       S.storageOk = false;
     }
+    const snap = ws === 'local' && E.LOCAL_WORKSPACE ? E.LOCAL_WORKSPACE.snapshotAt : null;
+    if (data && Array.isArray(data.changes) && snap && (data.meta || {}).fileSnapshot !== snap) {
+      // A newer copy of the published HTML file was opened: its data becomes the baseline.
+      // Keep this browser's previous working copy so it can be recovered from the console/backup.
+      try {
+        localStorage.setItem(wsKey() + '.previous', JSON.stringify(data));
+      } catch (e) {}
+      S.fileUpdated = true;
+      data = null;
+    }
     if (data && Array.isArray(data.changes)) {
       S.changes = data.changes;
       S.meta = Object.assign(S.meta, data.meta || {});
@@ -46,7 +56,10 @@
     } else {
       S.changes = seedFor(ws);
       S.meta.createdAt = new Date().toISOString();
-      if (ws === 'local' && E.LOCAL_WORKSPACE) S.meta.user = E.LOCAL_WORKSPACE.user || 'Local User';
+      if (ws === 'local' && E.LOCAL_WORKSPACE) {
+        if (!S.meta.user || S.meta.user === 'V. Morgan') S.meta.user = E.LOCAL_WORKSPACE.user || 'Local User';
+        S.meta.fileSnapshot = snap;
+      }
     }
     S.save();
   };
@@ -69,6 +82,7 @@
   };
   S.reset = function () {
     S.changes = seedFor(S.workspace);
+    if (S.workspace === 'local' && E.LOCAL_WORKSPACE) S.meta.fileSnapshot = E.LOCAL_WORKSPACE.snapshotAt || null;
     S.meta.createdAt = new Date().toISOString();
     S.save();
     S.emit();
