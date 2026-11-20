@@ -3,10 +3,12 @@
 import { boot, cleanup, enter, leave, syncFlags } from './index';
 
 let navigating = false;
+let traverse = false;
 
 export function start(setup?: () => void) {
   document.addEventListener('astro:before-preparation', (e) => {
     navigating = true;
+    traverse = (e as unknown as { navigationType?: string }).navigationType === 'traverse';
     const load = e.loader;
     e.loader = async () => { await Promise.all([leave(), load()]); };
   });
@@ -18,7 +20,8 @@ export function start(setup?: () => void) {
   document.addEventListener('astro:page-load', () => {
     if (!navigating) return void boot(setup); // first load (boot is idempotent)
     navigating = false;
-    enter();
+    enter(traverse ? { transition: true, scrollTop: false, instant: true } : {});
+    traverse = false;
   });
   // Module scripts run after parsing: boot now instead of waiting for the first astro:page-load.
   boot(setup);

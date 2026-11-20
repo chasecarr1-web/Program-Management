@@ -22,8 +22,9 @@ export const gap = (w: number) => Math.max(0, plan(w) - actual(w));
 
 export type Rag = 'green' | 'amber' | 'red';
 export const rag = (w: number): Rag => {
-  const g = gap(w);
-  return g >= 5 ? 'red' : g >= 1.5 ? 'amber' : 'green';
+  if (w <= 0.01) return 'red';
+  const g = Math.round(gap(w));
+  return g >= 5 ? 'red' : g >= 1 ? 'amber' : 'green';
 };
 export const status = (w: number) => {
   if (w <= 0.01) return 'No line item';

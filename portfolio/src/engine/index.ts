@@ -74,7 +74,8 @@ export async function boot(setup?: () => void) {
   initPage();
   await runLoader();
   startScroll();
-  intro?.play();
+  if (instant) intro?.progress(1);
+  else intro?.play();
 }
 
 /** Play the leave animation (resolve when the screen is covered). */
@@ -93,7 +94,7 @@ export function cleanup() {
 }
 
 /** Init the new page. `transition: false` for back/forward, where no leave ran. */
-export async function enter({ transition = true, scrollTop = true } = {}) {
+export async function enter({ transition = true, scrollTop = true, instant = false } = {}) {
   if (!booted) return;
   cleanup(); // no-op if the adapter already cleaned up
   if (scrollTop) resetScroll();

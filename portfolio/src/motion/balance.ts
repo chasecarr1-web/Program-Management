@@ -54,8 +54,8 @@ function weekAt(y: number): { w: number; sec: string } {
 }
 
 function apply(w: number, drift = 0, sec = lastSec) {
-  w = Math.min(WEEKS, Math.max(0, w));
-  const key = (Math.round(w * 4) / 4).toFixed(2);
+  w = Math.round(Math.min(WEEKS, Math.max(0, w)) * 4) / 4;
+  const key = w.toFixed(2);
   const r = rag(w);
   const label = status(w);
   for (const c of charts) {
@@ -68,6 +68,7 @@ function apply(w: number, drift = 0, sec = lastSec) {
       if (c.state.textContent !== label) c.state.textContent = label;
       if (c.root.dataset.rag !== r) c.root.dataset.rag = r;
       c.readout.classList.toggle('is-flip', w > 40);
+      c.readout.classList.toggle('is-top', plan(w) / TOTAL < 0.25);
     }
   }
   if (strip && key !== lastKey) {
@@ -111,7 +112,7 @@ export function startBalance() {
     lastKey = '';
     lastSec = '';
     measure();
-    const s = weekAt(scrollState().y || scrollY);
+    const s = weekAt(scrollY);
     current = s.w;
     const off: (() => void)[] = [];
     const onRefresh = () => { measure(); lastKey = ''; apply(current, 0, lastSec); };
@@ -129,7 +130,7 @@ export function startBalance() {
       tl.add(gsap.to(proxy, {
         w: current, duration: 1.3, ease: ease.out,
         onUpdate: () => apply(proxy.w, 0, s.sec),
-        onComplete: () => { intro = null; const n = weekAt(scrollState().y || scrollY); current = n.w; apply(current, 0, n.sec); },
+        onComplete: () => { intro = null; const n = weekAt(scrollY); current = n.w; apply(current, 0, n.sec); },
       }), 0.35);
     } else {
       intro = null;
