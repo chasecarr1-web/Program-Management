@@ -1,0 +1,92 @@
+---
+import Base from '../layouts/Base.astro';
+import Chart from '../components/Chart.astro';
+import { site, programs, week, monthly, statement, tools, about } from '../data/site';
+const fills = [0.58, 0.74, 0.86];
+---
+<Base start={18} section="Overview">
+  <section class="hero" data-week="18" data-sec="Overview" aria-labelledby="hero-name">
+    <div class="hero__stage grid">
+      <h1 class="hero__name display" id="hero-name">
+        <span>Chase</span><span class="l2">Carr</span>
+      </h1>
+      <Chart start={18} class="hero__chart" label="Illustrative Line of Balance, the idea behind this site" />
+      <div class="hero__meta">
+        <p class="hero__line" data-split="lines" data-intro data-delay="0.35">{site.hero.line}</p>
+        <div class="hero__legend" data-reveal="fade" data-intro data-delay="0.6">
+          <div class="lob__legend" aria-hidden="true">
+            <span><i style="color:var(--c-plan)"></i>Plan</span>
+            <span><i style="color:var(--c-fg)"></i>Delivered</span>
+            <span><i style="color:var(--c-red);border-top-width:8px;opacity:.3"></i>Gap, colored by status</span>
+          </div>
+          <p class="label">{site.chartNote} Scroll moves the status date.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" id="programs" data-week="22" data-sec="Programs" aria-labelledby="programs-title">
+    <div class="grid">
+      <div class="sec__head">
+        <h2 class="sec__title display" id="programs-title" data-split="lines">Programs</h2>
+        <p class="sec__aside" data-reveal="fade">Business jet nacelle and thrust reverser programs at {site.employer}, plus the tooling that keeps them honest.</p>
+      </div>
+      <ul class="index" role="list">
+        {programs.map((p, i) => (
+          <li class="row" style={`--fill:${fills[i % fills.length]}`} data-reveal="up" data-delay={String(i * 0.06)}>
+            <h3 class="row__title"><a href={`/work/${p.slug}/`}>{p.title}</a></h3>
+            <span class="row__customer">{p.customer}</span>
+            <span class="row__scope">{p.scope}</span>
+            <span class="row__bar" aria-hidden="true"></span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  </section>
+
+  <section class="sec sec--tight" id="week" data-week="30" data-sec="Rhythm" aria-labelledby="week-title">
+    <div class="grid">
+      <div class="sec__head">
+        <h2 class="sec__title display" id="week-title" data-split="lines">The week</h2>
+        <p class="sec__aside" data-reveal="fade">A program is run by its rhythm. This is mine, every week, on every program.</p>
+      </div>
+      <ol class="week" role="list" style="list-style:none;padding:0">
+        {week.map((d, i) => (
+          <li class:list={['day', d.day === 'Fri' && 'day--fri']} data-reveal="up" data-delay={String(i * 0.08)}>
+            <p class="day__name"><span>{d.day}</span><span class="mono">{d.time}</span></p>
+            <ul>{d.items.map((it) => <li>{it}</li>)}</ul>
+          </li>
+        ))}
+      </ol>
+      <p class="week__note" data-reveal="fade">{monthly}</p>
+    </div>
+  </section>
+
+  <section class="sec sec--airy" data-week="38" data-sec="Method" aria-label="Method">
+    <div class="grid">
+      <p class="statement" data-split="lines">{statement}</p>
+    </div>
+  </section>
+
+  <section class="sec" id="tools" data-week="44" data-sec="Tools" aria-labelledby="tools-title">
+    <div class="grid">
+      <div class="tools__left">
+      <h2 class="tools__title" id="tools-title" data-split="lines">{tools.heading}</h2>
+      <p class="tools__text" data-reveal="fade">{tools.text} <a class="link" href="/work/program-command-center/">See the command center</a>.</p>
+      </div>
+      <ul class="tools__list" role="list">
+        {tools.items.map((t, i) => (
+          <li data-reveal="up" data-delay={String(i * 0.06)}><strong>{t.name}</strong><p>{t.note}</p></li>
+        ))}
+      </ul>
+    </div>
+  </section>
+
+  <section class="sec" id="about" data-week="48" data-sec="About" aria-labelledby="about-title">
+    <div class="grid">
+      <h2 class="about__title label" id="about-title">{about.heading}</h2>
+      <p class="about__text" data-split="lines">{about.text}</p>
+      <ul class="about__services" role="list" data-reveal="fade">{about.services.map((s) => <li>{s}</li>)}</ul>
+    </div>
+  </section>
+</Base>

@@ -1,0 +1,32 @@
+---
+// Line of Balance chart. SSR renders the state at `start`; the balance driver moves it on the client.
+import { VB, WEEKS, TOTAL, planPath, actualPath, gapPath, pct, rag, status, pad2, plan } from '../motion/lob';
+interface Props { start: number; class?: string; label?: string }
+const { start, class: cls = '', label = 'Line of Balance chart' } = Astro.props;
+const xs = [0, 13, 26, 39, 52];
+const ys = [0, 16, 32, 48];
+const r = rag(start);
+---
+<figure class:list={['lob', cls]} data-lob data-rag={r} aria-label={label}>
+  <div class="lob__plot">
+    <svg viewBox={`0 0 ${VB.w} ${VB.h}`} preserveAspectRatio="none" aria-hidden="true" focusable="false">
+      <g class="lob__grid">
+        {xs.map((w) => <line x1={(w / WEEKS) * VB.w} x2={(w / WEEKS) * VB.w} y1="0" y2={VB.h} />)}
+        {ys.map((v) => <line x1="0" x2={VB.w} y1={VB.h - (v / TOTAL) * VB.h} y2={VB.h - (v / TOTAL) * VB.h} />)}
+      </g>
+      <path class="lob__gap" d={gapPath(start)} data-lob-gap />
+      <g class="lob__planwrap" data-lob-plan><path class="lob__plan" d={planPath()} /></g>
+      <path class="lob__actual" d={actualPath(start)} data-lob-actual />
+    </svg>
+    {xs.map((w) => <span class="lob__x" style={`left:${pct.x(w)}%`} aria-hidden="true">Wk {pad2(w)}</span>)}
+    {ys.map((v) => <span class="lob__y" style={`top:${pct.y(v)}%`} aria-hidden="true">{v}</span>)}
+    <div class="lob__cross" data-lob-cross aria-hidden="true"><span data-lob-cross-label></span></div>
+    <div class="lob__now" data-lob-now style={`left:${pct.x(start)}%`}>
+      <div class:list={['lob__readout', start > 40 && 'is-flip']} data-lob-readout>
+        <span class="lob__wk">Status wk <span data-lob-wk>{pad2(start)}</span></span>
+        <span class="lob__state"><span class="dot"></span><span data-lob-state>{status(start)}</span></span>
+      </div>
+    </div>
+  </div>
+  <figcaption class="sr-only">Illustrative Line of Balance: cumulative planned shipsets against delivered shipsets over 52 weeks. Not program data.</figcaption>
+</figure>

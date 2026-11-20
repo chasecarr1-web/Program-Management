@@ -1,0 +1,13 @@
+---
+import { rag, status, pad2, actual, plan, TOTAL } from '../motion/lob';
+interface Props { start?: number; section?: string }
+const { start = 10, section = '' } = Astro.props;
+---
+<aside class="strip" data-strip data-rag={rag(start)} aria-label="Balance strip, illustrative">
+  <span class="strip__wk">Wk <span data-strip-wk>{pad2(start)}</span></span>
+  <div class="strip__bar" aria-hidden="true">
+    <div class="strip__actual" data-strip-actual style={`scale:${actual(start) / TOTAL} 1`}></div>
+    <div class="strip__plan" data-strip-plan style={`left:${(plan(start) / TOTAL) * 100}%`}></div>
+  </div>
+  <span class="strip__state"><span class="dot"></span><span data-strip-state>{status(start)}</span><span class="strip__sec" data-strip-sec>{section}</span></span>
+</aside>

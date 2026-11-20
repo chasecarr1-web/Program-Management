@@ -1,0 +1,16 @@
+---
+import Base from '../layouts/Base.astro';
+---
+<Base title="Not found" description="This page is not on the plan. There is no line item for it, no owner and no date, so head back to the programs instead." start={0} state={0} section="Not found">
+  <section class="nf grid" data-week="0" data-sec="Not found">
+    <p class="nf__code">Status 404</p>
+    <h1 class="nf__title display">No line item for this page</h1>
+    <dl class="nf__rail" data-reveal="fade" data-intro data-delay="0.3">
+      <div><dt class="label">Owner</dt><dd>Unassigned</dd></div>
+      <div><dt class="label">Need date</dt><dd>None</dd></div>
+      <div><dt class="label">Status</dt><dd><span style="display:inline-flex;align-items:center;gap:.45em" data-rag="red"><span class="dot"></span>Not on the plan</span></dd></div>
+      <div><dt class="label">Next step</dt><dd>Go back</dd></div>
+    </dl>
+    <a class="nf__back link" href="/">Back to the programs</a>
+  </section>
+</Base>
