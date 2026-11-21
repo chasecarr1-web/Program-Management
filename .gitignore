@@ -6,3 +6,6 @@ data/*.local.json
 *.lnk
 .DS_Store
 dist/
+
+# /jury review evidence (screenshots contain company financials)
+.jury/
