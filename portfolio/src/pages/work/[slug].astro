@@ -1,0 +1,49 @@
+---
+import Base from '../../layouts/Base.astro';
+import Chart from '../../components/Chart.astro';
+import { site, programs } from '../../data/site';
+export function getStaticPaths() {
+  return programs.map((p, i) => ({ params: { slug: p.slug }, props: { p, next: programs[(i + 1) % programs.length] } }));
+}
+const { p, next } = Astro.props;
+const weeks = [14, 24, 34, 42, 48];
+const ld = {
+  '@context': 'https://schema.org',
+  '@type': 'CreativeWork',
+  name: p.title,
+  description: p.summary,
+  author: { '@type': 'Person', name: site.name, url: site.url },
+};
+---
+<Base title={p.title} description={p.summary.length > 160 ? p.summary.slice(0, 157).replace(/\s+\S*$/, '') + '.' : p.summary} start={8} section={p.title} jsonLd={ld}>
+  <article>
+    <header class="case-hero grid" data-week="8" data-sec={p.title}>
+      <a class="case-hero__back link" href="/#programs">All programs</a>
+      <h1 class="case-hero__title display">{p.title}</h1>
+      <p class="case-hero__sum" data-split="lines" data-intro data-delay="0.25">{p.summary}</p>
+      <dl class="facts">
+        {p.facts.map((f) => <div><dt class="label">{f.label}</dt><dd>{f.value}</dd></div>)}
+      </dl>
+    </header>
+    <div class="grid">
+      <div class="case-chart-wrap" data-reveal="fade">
+        <Chart start={8} class="case-chart" label={`Illustrative Line of Balance for ${p.title}`} />
+      </div>
+    </div>
+    <div class="case-body grid">
+      {p.body.map((s, i) => (
+        <section class="case-sec" data-week={String(weeks[i])} data-sec={s.heading}>
+          <h2 data-split="lines">{s.heading}</h2>
+          <p data-reveal="up">{s.text}</p>
+        </section>
+      ))}
+      <p class="note">The chart above is illustrative and contains no program data.</p>
+    </div>
+    <a class="next" href={`/work/${next.slug}/`} data-week="52" data-sec="Next program">
+      <span class="grid">
+        <span class="next__label">Next program</span>
+        <span class="next__title display">{next.title} <span class="arr" aria-hidden="true">→</span></span>
+      </span>
+    </a>
+  </article>
+</Base>

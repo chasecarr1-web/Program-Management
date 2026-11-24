@@ -1,0 +1,512 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>GPNL Margin View</title>
+<meta name="description" content="Reads Finance's NTR YTD GPNL workbook in the browser and shows gross profit by product line, program, customer and sales order against budget." />
+<style>
+:root{color-scheme:dark;--bg:#0a1020;--bg2:#0e1628;--panel:#131c2e;--panel2:#172238;--panel3:#1c2942;--border:#24324d;--border2:#2e3f60;--text:#f1f4f9;--text2:#c2cbdb;--muted:#8d99b0;--faint:#5b6b85;--blue:#3d8ef0;--blue-bg:rgba(61,142,240,.14);--green:#35c46f;--red:#f06a6a;--yellow:#f4b425;--budget:#8d99b0;--radius:10px;--mono:'JetBrains Mono',Consolas,'SFMono-Regular',monospace;--sans:Inter,-apple-system,'Segoe UI',Roboto,Arial,sans-serif}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--text);font:13.5px/1.45 var(--sans);-webkit-font-smoothing:antialiased}
+button,input,select{font:inherit;color:inherit}
+a{color:var(--blue);text-decoration:none}
+.wrap{max-width:1320px;margin:0 auto;padding:18px 20px 60px}
+header.top{display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+header.top h1{font-size:19px;margin:0;font-weight:650;letter-spacing:-.01em}
+header.top .src{color:var(--muted);font-size:12.5px}
+header.top .sp{flex:1}
+.btn{background:var(--panel2);border:1px solid var(--border2);border-radius:8px;padding:7px 12px;cursor:pointer;color:var(--text2)}
+.btn:hover{background:var(--panel3);color:var(--text)}
+.btn.primary{background:var(--blue);border-color:var(--blue);color:#fff;font-weight:600}
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--border);margin-bottom:14px;overflow-x:auto}
+.tabs a{padding:9px 14px;color:var(--muted);border-bottom:2px solid transparent;white-space:nowrap;cursor:pointer}
+.tabs a.on{color:var(--text);border-color:var(--blue);font-weight:600}
+.bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+.seg{display:inline-flex;background:var(--panel);border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.seg button{background:none;border:0;padding:6px 12px;cursor:pointer;color:var(--muted)}
+.seg button.on{background:var(--blue-bg);color:var(--text);font-weight:600}
+select,input[type=search]{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:6px 10px}
+input[type=search]{min-width:220px}
+.lbl{color:var(--muted);font-size:12px}
+.grid{display:grid;gap:12px}
+.kpis{grid-template-columns:repeat(auto-fit,minmax(215px,1fr));margin-bottom:12px}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px}
+.card h3{margin:0 0 10px;font-size:13px;font-weight:600;color:var(--text2)}
+.kpi .k{color:var(--muted);font-size:12px}
+.kpi .v{font-size:25px;font-weight:650;letter-spacing:-.02em;margin:2px 0;font-variant-numeric:tabular-nums}
+.kpi .s{font-size:12.5px;color:var(--text2)}
+.two{grid-template-columns:repeat(auto-fit,minmax(380px,1fr));margin-bottom:12px}
+.tw{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+th,td{padding:7px 10px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--border)}
+th{color:var(--muted);font-weight:500;font-size:12px;position:sticky;top:0;background:var(--panel);cursor:pointer;user-select:none}
+th.l,td.l{text-align:left}
+td.l{white-space:normal;min-width:180px}
+tbody tr.click{cursor:pointer}
+tbody tr.click:hover{background:var(--panel2)}
+tr.tot td{font-weight:650;border-top:1px solid var(--border2);background:var(--panel2)}
+tr.sub td{font-weight:600;background:rgba(255,255,255,.025)}
+tr.ind td.l{padding-left:26px;color:var(--text2)}
+.neg{color:var(--red)}.pos{color:var(--green)}.mut{color:var(--muted)}
+.tag{display:inline-block;font-size:11px;padding:1px 7px;border-radius:20px;background:var(--panel3);color:var(--text2);margin-left:6px}
+.fin{color:var(--faint);font-size:11.5px;display:block}
+.drop{border:1.5px dashed var(--border2);border-radius:14px;padding:56px 24px;text-align:center;background:var(--panel);margin-top:30px}
+.drop.over{border-color:var(--blue);background:var(--blue-bg)}
+.drop h2{margin:0 0 8px;font-size:20px}
+.drop p{color:var(--muted);max-width:560px;margin:6px auto}
+.status{margin-top:14px;color:var(--yellow);min-height:20px}
+.note{color:var(--muted);font-size:12.5px;margin:8px 0 0}
+.chk{display:grid;grid-template-columns:22px 1fr;gap:4px 8px;padding:9px 0;border-bottom:1px solid var(--border)}
+.chk .i{font-weight:700}.chk .d{color:var(--muted);font-size:12.5px;grid-column:2}
+.ok{color:var(--green)}.warn{color:var(--yellow)}.bad{color:var(--red)}
+ol.flow{margin:0;padding-left:20px;color:var(--text2)}ol.flow li{margin:6px 0}
+code{font-family:var(--mono);font-size:12px;background:var(--panel3);padding:1px 5px;border-radius:4px}
+#tip{position:fixed;pointer-events:none;background:#000c;border:1px solid var(--border2);border-radius:8px;padding:7px 10px;font-size:12.5px;display:none;z-index:9;white-space:pre-line;backdrop-filter:blur(4px)}
+.legend{display:flex;gap:14px;color:var(--text2);font-size:12px;margin-bottom:4px}
+.legend i{display:inline-block;width:12px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+svg text{fill:var(--muted);font-size:11px;font-family:var(--sans)}
+.crumb{margin-bottom:10px}.crumb a{cursor:pointer}
+h2.t{font-size:18px;margin:0 0 4px}
+@media print{.btn,.tabs,.bar{display:none}body{background:#fff;color:#000}}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<div id="tip"></div>
+<input type="file" id="file" accept=".xlsx,.xlsm" hidden />
+<!-- Optional saved data kept out of source control (data/*.local.js is git-ignored). A missing file is ignored. -->
+<script src="data/gpnl.local.js" onerror="this.remove()"></script>
+<script>
+'use strict';
+/* =====================================================================
+   GPNL Margin View
+   Reads Finance's "NTR YTD GPNL" workbook directly in the browser (no
+   upload, no libraries) and rebuilds every report tab from one source:
+   the ZFCAGP Detail tab. Budget, Forecast and CO Summary are read for
+   comparison and tie-out. No financial data lives in this file.
+   ===================================================================== */
+
+/* ---------- 1. Minimal .xlsx reader (zip + sheet XML) ---------- */
+const XL = {
+  async open(buf) {
+    const dv = new DataView(buf), u8 = new Uint8Array(buf);
+    let e = buf.byteLength - 22;
+    while (e >= 0 && dv.getUint32(e, true) !== 0x06054b50) e--;
+    if (e < 0) throw new Error('Not an .xlsx file');
+    const n = dv.getUint16(e + 10, true); let p = dv.getUint32(e + 16, true);
+    const td = new TextDecoder(), files = {};
+    for (let i = 0; i < n; i++) {
+      const method = dv.getUint16(p + 10, true), csize = dv.getUint32(p + 20, true);
+      const nl = dv.getUint16(p + 28, true), el = dv.getUint16(p + 30, true), cl = dv.getUint16(p + 32, true);
+      const off = dv.getUint32(p + 42, true);
+      files[td.decode(u8.subarray(p + 46, p + 46 + nl))] = { method, csize, off };
+      p += 46 + nl + el + cl;
+    }
+    const read = async (name) => {
+      const f = files[name]; if (!f) return null;
+      const start = f.off + 30 + dv.getUint16(f.off + 26, true) + dv.getUint16(f.off + 28, true);
+      const raw = u8.subarray(start, start + f.csize);
+      if (f.method === 0) return td.decode(raw);
+      const s = new Blob([raw]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+      return td.decode(await new Response(s).arrayBuffer());
+    };
+    const wbx = await read('xl/workbook.xml'), rels = await read('xl/_rels/workbook.xml.rels');
+    if (!wbx || !rels) throw new Error('Workbook parts missing');
+    const target = {};
+    for (const m of rels.matchAll(/<Relationship\b[^>]*>/g)) {
+      const id = /Id="([^"]+)"/.exec(m[0]), t = /Target="([^"]+)"/.exec(m[0]);
+      if (id && t) target[id[1]] = t[1].startsWith('/') ? t[1].slice(1) : 'xl/' + t[1];
+    }
+    const sheets = {};
+    for (const m of wbx.matchAll(/<sheet\b[^>]*>/g)) {
+      const nm = /name="([^"]+)"/.exec(m[0]), id = /r:id="([^"]+)"/.exec(m[0]);
+      if (nm && id) sheets[XL.unesc(nm[1])] = target[id[1]];
+    }
+    const sst = [], sx = await read('xl/sharedStrings.xml') || '';
+    for (const m of sx.matchAll(/<si>(.*?)<\/si>|<si\/>/gs)) {
+      let s = '';
+      if (m[1]) for (const t of m[1].replace(/<rPh\b.*?<\/rPh>/gs, '').matchAll(/<t(?:\s[^>]*)?>(.*?)<\/t>/gs)) s += t[1];
+      sst.push(XL.unesc(s));
+    }
+    return { names: Object.keys(sheets), sheet: async (name) => { const x = await read(sheets[name] || ''); return x ? XL.rows(x, sst) : null; } };
+  },
+  unesc: (s) => s.indexOf('&') < 0 ? s : s.replace(/&(lt|gt|amp|quot|apos|#x?[0-9a-fA-F]+);/g, (_, k) => ({ lt: '<', gt: '>', amp: '&', quot: '"', apos: "'" })[k] || String.fromCodePoint(k[1] === 'x' ? parseInt(k.slice(2), 16) : +k.slice(1))),
+  col(ref) { let c = 0; for (let i = 0; i < ref.length; i++) { const k = ref.charCodeAt(i); if (k < 65) break; c = c * 26 + k - 64; } return c - 1; },
+  /* returns sparse array: rows[excelRowNumber] = array of cell values by column index */
+  rows(xml, sst) {
+    const out = [];
+    const rowRe = /<row\b([^>]*?)(?:\/>|>(.*?)<\/row>)/gs, cRe = /<c\b([^>]*?)(?:\/>|>(.*?)<\/c>)/gs;
+    let m;
+    while ((m = rowRe.exec(xml))) {
+      if (!m[2]) continue;
+      const rn = +(/\br="(\d+)"/.exec(m[1]) || [0, out.length])[1], cells = [];
+      cRe.lastIndex = 0; let c;
+      while ((c = cRe.exec(m[2]))) {
+        if (!c[2]) continue;
+        const ref = /\br="([A-Z]+)/.exec(c[1]), t = /\bt="(\w+)"/.exec(c[1]);
+        const v = /<v>(.*?)<\/v>/s.exec(c[2]);
+        let val = null;
+        if (t && t[1] === 's') val = v ? sst[+v[1]] : null;
+        else if (t && t[1] === 'inlineStr') { const is = /<t[^>]*>(.*?)<\/t>/s.exec(c[2]); val = is ? XL.unesc(is[1]) : null; }
+        else if (t && t[1] === 'str') val = v ? XL.unesc(v[1]) : null;
+        else if (t && t[1] === 'e') val = null;
+        else if (t && t[1] === 'b') val = v ? v[1] === '1' : null;
+        else if (v) val = +v[1];
+        if (ref && val !== null && val !== '') cells[XL.col(ref[1])] = val;
+      }
+      out[rn] = cells;
+    }
+    return out;
+  },
+  month(serial) { if (typeof serial !== 'number') return null; const d = new Date(Date.UTC(1899, 11, 30) + Math.round(serial) * 864e5); return d.getUTCFullYear() + '-' + String(d.getUTCMonth() + 1).padStart(2, '0'); },
+};
+
+/* ---------- 2. Workbook -> one tidy model ---------- */
+const NUM = { gross: 'Gross Sales', disc: 'Discounts, Returns & Adjs', ns: 'Net Sales', qty: 'Quantity', mat: 'Material', lab: 'Labor', vmb: "Var Mat'l Burden", voh: 'Variable OH', roy: 'Royalties & Vol Discount', vc: 'Variable Costs', fmb: "Fixed Mat'l Burden", foh: 'Fixed OH', nreA: 'NRE Amortization', nreR: 'NRE Reimbursement', fc: 'Fixed Costs', caa: 'Contract Accnt Adj', inv: 'Inventory Reserves', war: 'Warranty Reserves', cos: 'Cost of Sales', fCM: 'Contribution Margin Actual', fGM: 'Gross Margin' };
+const TXT = { chan: 'Dchnl', line: 'Product Line', ph: 'Prod.hierarchy', part: 'Product', desc: 'Product Description', cust: 'Customer Name', so: 'Sales Order', reason: 'Order Reason', reasonName: 'Reason Name', project: 'Project', group: 'Program Comments', program: 'Program' };
+const KEYS = Object.keys(NUM);
+/* Finance "Product Line" (ZFCAGP Detail col C) -> Budget / Forecast block title, and a plain name */
+const LINES = {
+  'F2000EX': ['Falcon F2000/Annex', 'Falcon 2000EX IPPS'],
+  'Sovereign Latitude NetJets': ['Latitude Thrust Reverser', 'Latitude thrust reverser'],
+  'Excel TR': ['XLS+/Ascend Thrust Reverser', 'Ascend / XLS+ thrust reverser'],
+  'Excel Cowls': ['XLS+/Ascend Cowl Door', 'Ascend / XLS+ cowl door and inlet skin'],
+  'GE PP20': ['GE Passport20 - FFD', 'Passport 20 bypass duct'],
+  'DAG 328eco': ['DAG 328Eco - Nacelle', 'D328eco nacelle'],
+  'GKN HTF7000': ['GKN HTF7000', 'HTF7000 cowl door'],
+  'F35': ['Northrop Grumman F-35', 'F-35 engine inlet duct'],
+  'F35-SYNCORE': ['F-35 Syncore Kits', 'F-35 Syncore kitting'],
+  'F-35 BMI Panel': ['LMA BMI Panels', 'F-35 BMI access panel'],
+  'Aftermarket': ['Aftermarket', 'Aftermarket (all platforms)'],
+  'Miscellaneous': ['Miscellaneous', 'Miscellaneous'],
+};
+const norm = (s) => String(s == null ? '' : s).replace(/\s+/g, ' ').trim();
+const up = (s) => norm(s).toUpperCase();
+
+function findHeader(rows, must) {
+  for (let r = 1; r <= 12; r++) { const row = rows[r]; if (row && row.some((v) => norm(v) === must)) { const h = {}; row.forEach((v, i) => { const k = norm(v); if (k && !(k in h)) h[k] = i; }); return { r, h }; } }
+  return null;
+}
+function planBlocks(rows) {
+  if (!rows) return null;
+  const hdr = rows[2] || [], flags = rows[1] || [], blocks = {}, order = [];
+  let cur = null;
+  for (let r = 3; r < rows.length; r++) {
+    const row = rows[r] || [], lab = up(row[2]), nxt = up((rows[r + 1] || [])[2]);
+    if (lab && nxt === 'SALES') { cur = { title: norm(row[2]), units: row.slice(3, 16), rows: {} }; blocks[up(row[2]).replace(/:$/, '')] = cur; order.push(cur.title); continue; }
+    if (cur && lab && !(lab in cur.rows)) cur.rows[lab] = { fy: +row[3] || 0, m: Array.from({ length: 12 }, (_, i) => +row[4 + i] || 0) };
+  }
+  return { blocks, order, months: Array.from({ length: 12 }, (_, i) => XL.month(hdr[4 + i])), flags: Array.from({ length: 12 }, (_, i) => norm(flags[4 + i])) };
+}
+async function buildModel(file, say) {
+  say('Opening ' + file.name + ' ...');
+  const wb = await XL.open(await file.arrayBuffer());
+  const need = (n) => { if (!wb.names.includes(n)) throw new Error('Tab "' + n + '" not found. Is this the NTR GPNL workbook?'); };
+  need('ZFCAGP Detail');
+  say('Reading ZFCAGP Detail (the SAP line items) ...');
+  const d = await wb.sheet('ZFCAGP Detail');
+  const H = findHeader(d, 'Prod.hierarchy');
+  if (!H) throw new Error('ZFCAGP Detail: header row not found');
+  const miss = [...Object.values(NUM), ...Object.values(TXT), 'Month'].filter((k) => !(k in H.h));
+  if (miss.length) throw new Error('ZFCAGP Detail is missing columns: ' + miss.join(', '));
+  const rows = [], mi = H.h.Month;
+  for (let r = H.r + 1; r < d.length; r++) {
+    const c = d[r]; if (!c) continue;
+    const m = XL.month(c[mi]); if (!m) continue;
+    const o = { m };
+    for (const k in TXT) o[k] = norm(c[H.h[TXT[k]]]);
+    for (const k in NUM) o[k] = +c[H.h[NUM[k]]] || 0;
+    if (!o.line) o.line = '(no product line)';
+    if (!o.chan) o.chan = '(no channel)';
+    rows.push(o);
+  }
+  if (!rows.length) throw new Error('ZFCAGP Detail has no data rows');
+  const months = [...new Set(rows.map((r) => r.m))].sort();
+  const close = XL.month((d[3] || [])[0]);
+  say('Reading Budget, Forecast and CO Summary ...');
+  const budget = planBlocks(await wb.sheet('Budget')), forecast = planBlocks(await wb.sheet('Forecast'));
+  const gr55 = {}, co = await wb.sheet('CO Summary');
+  if (co) for (const r of co) if (r && typeof r[7] === 'string' && typeof r[8] === 'number') gr55[norm(r[7])] = r[8];
+  const rw1 = [], w = await wb.sheet('ZFCAGP RW1 Detail');
+  if (w) { const WH = findHeader(w, 'Prod.hierarchy'); if (WH) for (let r = WH.r + 1; r < w.length; r++) { const c = w[r]; if (!c) continue; const m = XL.month(c[WH.h.Month]); if (!m) continue; const g = (k) => norm(c[WH.h[k]]); rw1.push({ m, wbs: g('Warranty Project'), type: g('Warranty Type'), program: g('Program'), cust: g('Customer Name'), so: g('Sales Order'), part: g('Product'), desc: g('Product Description'), cos: +c[WH.h['Cost of Sales']] || 0 }); } }
+  return { v: 1, file: file.name, loaded: new Date().toISOString(), close: close && months.includes(close) ? close : months[months.length - 1], statedClose: close, months, rows, budget, forecast, gr55, rw1, tabs: wb.names };
+}
+
+/* ---------- 3. Maths ---------- */
+const zero = () => { const o = {}; for (const k of KEYS) o[k] = 0; o.n = 0; return o; };
+const add = (a, r) => { for (const k of KEYS) a[k] += r[k]; a.n++; return a; };
+const fin = (a) => { a.cm = a.ns - a.vc; a.gm = a.ns - a.cos; a.cmp = a.ns ? a.cm / a.ns : null; a.gmp = a.ns ? a.gm / a.ns : null; return a; };
+const sum = (rows) => fin(rows.reduce(add, zero()));
+function groupBy(rows, key) { const g = new Map(); for (const r of rows) { const k = typeof key === 'function' ? key(r) : r[key]; let a = g.get(k); if (!a) g.set(k, a = Object.assign(zero(), { key: k, first: r })); add(a, r); } return [...g.values()].map(fin); }
+const PL = [ /* key, label, kind (rev: more is better, cost: less is better), budget row label(s), style */
+  ['ns', 'Net sales', 'rev', ['SALES'], 'sub'],
+  ['mat', 'Material', 'cost', ['MATERIAL CHARGES'], 'ind'],
+  ['lab', 'Labor', 'cost', ['LABOR $'], 'ind'],
+  ['vmb', 'Variable material burden', 'cost', ['MATERIAL BURDEN - VARIABLE'], 'ind'],
+  ['voh', 'Variable overhead', 'cost', ['VARIABLE OVERHEAD'], 'ind'],
+  ['nreA', 'NRE amortization', 'cost', ['NRE AMORTIZATION'], 'ind'],
+  ['nreR', 'NRE reimbursement', 'cost', ['NRE REIMBURSEMENT'], 'ind'],
+  ['caa', 'Contract accounting adjustments', 'cost', ['CONTRACT ACCOUNTING ADJUSTMENT'], 'ind'],
+  ['inv', 'Inventory reserve', 'cost', ['RESERVES - INVENTORY'], 'ind'],
+  ['war', 'Warranty reserve', 'cost', ['RESERVES - WARRANTY'], 'ind'],
+  ['roy', 'Royalties and volume discounts', 'cost', [], 'ind'],
+  ['vc', 'Variable costs', 'cost', ['VARIABLE COSTS'], 'sub'],
+  ['cm', 'Contribution margin', 'rev', ['CONTIBUTION MARGIN', 'CONTRIBUTION MARGIN'], 'tot'],
+  ['fmb', 'Fixed material burden', 'cost', ['MATERIAL BURDEN - FIXED'], 'ind'],
+  ['foh', 'Fixed overhead', 'cost', ['FIXED OVERHEAD'], 'ind'],
+  ['cos', 'Cost of sales', 'cost', null, 'sub'],
+  ['gm', 'Gross profit, before absorption', 'rev', ['GROSS PROFIT'], 'tot'],
+];
+/* plan (budget or forecast) for a product line over month indexes; fy=true gives the full-year column */
+function plan(src, line, idx, fy) {
+  const b = src && LINES[line] && src.blocks[up(LINES[line][0])]; if (!b) return null;
+  const get = (labels) => { for (const l of labels) { const r = b.rows[l]; if (r) return fy ? r.fy : idx.reduce((s, i) => s + r.m[i], 0); } return null; };
+  const o = {}; for (const [k, , , labels] of PL) if (labels) o[k] = get(labels);
+  if (o.ns == null || o.gm == null) return null;
+  o.cos = o.ns - o.gm; if (o.cm == null && o.vc != null) o.cm = o.ns - o.vc;
+  o.cmp = o.ns ? o.cm / o.ns : null; o.gmp = o.ns ? o.gm / o.ns : null;
+  return o;
+}
+const planSum = (list) => { const ok = list.filter(Boolean); if (!ok.length) return null; const o = {}; for (const [k] of PL) o[k] = ok.reduce((s, p) => s + (p[k] || 0), 0); o.cmp = o.ns ? o.cm / o.ns : null; o.gmp = o.ns ? o.gm / o.ns : null; return o; };
+
+/* ---------- 4. Formatting ---------- */
+const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+const usd = (v) => v == null || isNaN(v) ? '<span class="mut">n/a</span>' : (v < -0.5 ? '<span class="neg">(' + Math.round(-v).toLocaleString('en-US') + ')</span>' : Math.round(v).toLocaleString('en-US'));
+const big = (v) => { if (v == null) return 'n/a'; const a = Math.abs(v), s = v < 0 ? '-' : ''; return s + '$' + (a >= 1e6 ? (a / 1e6).toFixed(a >= 1e8 ? 1 : 2) + 'M' : a >= 1e3 ? (a / 1e3).toFixed(0) + 'K' : a.toFixed(0)); };
+const pct = (v) => v == null || !isFinite(v) ? '<span class="mut">n/a</span>' : (v < 0 ? '<span class="neg">' + (v * 100).toFixed(1) + '%</span>' : (v * 100).toFixed(1) + '%');
+const pctT = (v) => v == null || !isFinite(v) ? 'n/a' : (v * 100).toFixed(1) + '%';
+/* variance with a favourable / unfavourable letter so it never relies on colour alone */
+const vari = (a, b, kind, isPct) => { if (a == null || b == null) return '<span class="mut">n/a</span>'; const d = a - b; const good = kind === 'cost' ? d <= 0 : d >= 0; const t = isPct ? (d >= 0 ? '+' : '') + (d * 100).toFixed(1) + ' pts' : (d >= 0 ? '+' : '-') + Math.round(Math.abs(d)).toLocaleString('en-US'); return Math.abs(d) < (isPct ? 0.0005 : 0.5) ? '<span class="mut">0</span>' : '<span class="' + (good ? 'pos' : 'neg') + '">' + t + ' ' + (good ? 'F' : 'U') + '</span>'; };
+const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const mName = (m) => MON[+m.slice(5) - 1] + ' ' + m.slice(0, 4);
+const lineName = (l) => (LINES[l] || [0, l])[1];
+
+/* ---------- 5. State and rendering ---------- */
+const S = { M: null, tab: 'overview', mode: 'ytd', month: null, chan: 'All', line: null, sub: 'programs', q: '', sort: {}, all: {}, status: '' };
+const $app = document.getElementById('app');
+const inPeriod = (r) => S.mode === 'ytd' ? r.m <= S.month : r.m === S.month;
+const inChan = (r) => S.chan === 'All' || r.chan === S.chan;
+const monthIdx = () => { const i = +S.month.slice(5) - 1; return S.mode === 'ytd' ? Array.from({ length: i + 1 }, (_, k) => k) : [i]; };
+const periodLabel = () => S.mode === 'ytd' ? 'Jan to ' + mName(S.month) : mName(S.month);
+
+function table(id, cols, data, o = {}) {
+  const st = S.sort[id] || o.sort || null;
+  let rows = data.slice();
+  if (st) { const c = cols[st.i]; if (c && c.val) rows.sort((a, b) => { const x = c.val(a), y = c.val(b); return (x == null) - (y == null) || (typeof x === 'string' ? x.localeCompare(y) : x - y) * st.d; }); }
+  const cap = o.cap && !S.all[id] ? o.cap : Infinity, shown = rows.slice(0, cap);
+  return '<div class="tw"><table><thead><tr>' + cols.map((c, i) => `<th class="${c.l ? 'l' : ''}" data-act="sort" data-id="${id}" data-i="${i}" title="${esc(c.tip || 'Sort')}">${c.h}${st && st.i === i ? (st.d > 0 ? ' ▲' : ' ▼') : ''}</th>`).join('') + '</tr></thead><tbody>'
+    + shown.map((r) => `<tr class="${o.click ? 'click' : ''}" ${o.click ? o.click(r) : ''}>` + cols.map((c) => `<td class="${c.l ? 'l' : ''}">${c.f(r)}</td>`).join('') + '</tr>').join('')
+    + (o.total ? '<tr class="tot">' + cols.map((c) => `<td class="${c.l ? 'l' : ''}">${c.f(o.total, true)}</td>`).join('') + '</tr>' : '')
+    + '</tbody></table></div>' + (rows.length > cap ? `<p class="note">Showing ${cap} of ${rows.length}. <a data-act="all" data-id="${id}" style="cursor:pointer">Show all</a></p>` : '');
+}
+const moneyCols = (extra = []) => [
+  ...extra,
+  { h: 'Net sales', val: (r) => r.ns, f: (r) => usd(r.ns) },
+  { h: 'Cost of sales', val: (r) => r.cos, f: (r) => usd(r.cos) },
+  { h: 'CM %', val: (r) => r.cmp, f: (r) => pct(r.cmp), tip: 'Contribution margin: net sales less variable costs' },
+  { h: 'Gross profit', val: (r) => r.gm, f: (r) => usd(r.gm) },
+  { h: 'GM %', val: (r) => r.gmp, f: (r) => pct(r.gmp) },
+];
+
+function barChart(series, bud) { /* monthly net sales bars with a budget tick */
+  const W = 560, H = 210, L = 46, B = 24, T = 8, n = 12, max = Math.max(1, ...series.map((s) => s ? s.ns : 0), ...(bud || []).map((b) => b || 0)) * 1.08, bw = (W - L - 8) / n;
+  const y = (v) => T + (H - T - B) * (1 - v / max);
+  let g = '';
+  for (let i = 0; i <= 4; i++) { const v = max * i / 4; g += `<line x1="${L}" x2="${W}" y1="${y(v)}" y2="${y(v)}" stroke="#24324d"/><text x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${big(v).replace('$', '')}</text>`; }
+  for (let i = 0; i < n; i++) {
+    const s = series[i], x = L + i * bw + bw * 0.2, w = bw * 0.6, b = bud && bud[i];
+    const sel = s && (S.mode === 'ytd' ? s.m <= S.month : s.m === S.month);
+    if (s && s.ns > 0) g += `<path d="M${x},${y(0)}V${y(s.ns) + 3}q0,-3 3,-3h${w - 6}q3,0 3,3V${y(0)}Z" fill="#3d8ef0" opacity="${sel ? 1 : 0.35}"/>`;
+    if (b) g += `<line x1="${x - 3}" x2="${x + w + 3}" y1="${y(b)}" y2="${y(b)}" stroke="#c2cbdb" stroke-width="2"/>`;
+    g += `<text x="${x + w / 2}" y="${H - 7}" text-anchor="middle">${MON[i]}</text>`;
+    g += `<rect x="${L + i * bw}" y="${T}" width="${bw}" height="${H - T - B}" fill="transparent" ${s ? `data-act="month" data-m="${s.m}" style="cursor:pointer"` : ''} data-tip="${MON[i]}\nNet sales: ${s ? big(s.ns) : 'not closed'}${b ? '\nBudget: ' + big(b) : ''}${s && b ? '\nVariance: ' + big(s.ns - b) : ''}"/>`;
+  }
+  return `<div class="legend"><span><i style="background:#3d8ef0"></i>Actual</span>${bud ? '<span><i style="background:#c2cbdb;height:2px;vertical-align:3px"></i>Budget</span>' : ''}</div><svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Net sales by month">${g}</svg>`;
+}
+function lineChart(act, bud) { /* monthly GM % actual vs budget, one axis */
+  const W = 560, H = 210, L = 46, B = 24, T = 12, n = 12, vals = [...act, ...(bud || [])].filter((v) => v != null && isFinite(v));
+  let lo = Math.min(0, ...vals), hi = Math.max(0.1, ...vals); const pad = (hi - lo) * 0.1; lo -= lo < 0 ? pad : 0; hi += pad;
+  const x = (i) => L + (W - L - 30) * (i / (n - 1)) + 6, y = (v) => T + (H - T - B) * (1 - (v - lo) / (hi - lo));
+  let g = '';
+  for (let i = 0; i <= 4; i++) { const v = lo + (hi - lo) * i / 4; g += `<line x1="${L}" x2="${W}" y1="${y(v)}" y2="${y(v)}" stroke="#24324d"/><text x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${(v * 100).toFixed(0)}%</text>`; }
+  if (lo < 0) g += `<line x1="${L}" x2="${W}" y1="${y(0)}" y2="${y(0)}" stroke="#5b6b85"/>`;
+  const path = (a) => { let d = '', pen = false; a.forEach((v, i) => { if (v == null || !isFinite(v)) { pen = false; return; } d += (pen ? 'L' : 'M') + x(i) + ',' + y(v); pen = true; }); return d; };
+  if (bud) g += `<path d="${path(bud)}" fill="none" stroke="#8d99b0" stroke-width="2" stroke-dasharray="5 4"/>`;
+  g += `<path d="${path(act)}" fill="none" stroke="#3d8ef0" stroke-width="2"/>`;
+  for (let i = 0; i < n; i++) {
+    if (act[i] != null && isFinite(act[i])) g += `<circle cx="${x(i)}" cy="${y(act[i])}" r="4" fill="#3d8ef0" stroke="#131c2e" stroke-width="2"/>`;
+    g += `<text x="${x(i)}" y="${H - 7}" text-anchor="middle">${MON[i]}</text><rect x="${x(i) - 20}" y="${T}" width="40" height="${H - T - B}" fill="transparent" data-tip="${MON[i]}\nGM %: ${pctT(act[i])}${bud ? '\nBudget GM %: ' + pctT(bud[i]) : ''}"/>`;
+  }
+  return `<div class="legend"><span><i style="background:#3d8ef0"></i>Actual GM %</span>${bud ? '<span><i style="background:#8d99b0;height:2px;vertical-align:3px"></i>Budget GM %</span>' : ''}</div><svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Gross margin percent by month">${g}</svg>`;
+}
+function monthly(rows, lines) { /* 12 slots of actuals plus budget arrays for the given product lines */
+  const M = S.M, yr = M.close.slice(0, 4), by = new Map(groupBy(rows, 'm').map((a) => [a.key, a]));
+  const act = MON.map((_, i) => { const m = yr + '-' + String(i + 1).padStart(2, '0'); const a = by.get(m); return a ? Object.assign(a, { m }) : null; });
+  const bud = lines ? MON.map((_, i) => planSum(lines.map((l) => plan(M.budget, l, [i])))) : null;
+  return { act, bud: bud && bud.some(Boolean) ? bud : null };
+}
+function charts(rows, lines) {
+  const { act, bud } = monthly(rows, lines);
+  return `<div class="grid two"><div class="card"><h3>Net sales by month</h3>${barChart(act, bud && bud.map((b) => b && b.ns))}<p class="note">Click a month to select it.</p></div>
+  <div class="card"><h3>Gross margin % by month</h3>${lineChart(act.map((a) => a && a.ns > 0 ? a.gmp : null), bud && bud.map((b) => b && b.ns ? b.gmp : null))}</div></div>`;
+}
+function kpis(a, b, extra = '') {
+  const k = (name, v, s) => `<div class="card kpi"><div class="k">${name}</div><div class="v">${v}</div><div class="s">${s}</div></div>`;
+  return `<div class="grid kpis">`
+    + k('Net sales', big(a.ns), b ? 'Budget ' + big(b.ns) + ' &nbsp; ' + vari(a.ns, b.ns, 'rev') : periodLabel())
+    + k('Contribution margin', pctT(a.cmp), big(a.cm) + (b ? ' &nbsp; budget ' + pctT(b.cmp) + ' &nbsp; ' + vari(a.cmp, b.cmp, 'rev', true) : ''))
+    + k('Gross profit, before absorption', pctT(a.gmp), big(a.gm) + (b ? ' &nbsp; budget ' + pctT(b.gmp) + ' &nbsp; ' + vari(a.gmp, b.gmp, 'rev', true) : ''))
+    + extra + '</div>';
+}
+function controls() {
+  const M = S.M, chans = ['All', ...new Set(M.rows.map((r) => r.chan))].sort((a, b) => (a === 'All' ? -1 : b === 'All' ? 1 : a.localeCompare(b)));
+  return `<div class="bar"><span class="lbl">Period</span><div class="seg"><button data-act="mode" data-v="ytd" class="${S.mode === 'ytd' ? 'on' : ''}">Year to date</button><button data-act="mode" data-v="month" class="${S.mode === 'month' ? 'on' : ''}">Single month</button></div>
+  <select data-act="pick">${M.months.map((m) => `<option value="${m}" ${m === S.month ? 'selected' : ''}>${S.mode === 'ytd' ? 'through ' : ''}${mName(m)}</option>`).join('')}</select>
+  <span class="lbl" style="margin-left:8px">Channel</span><div class="seg">${chans.map((c) => `<button data-act="chan" data-v="${esc(c)}" class="${S.chan === c ? 'on' : ''}">${esc(c)}</button>`).join('')}</div></div>`;
+}
+
+function vOverview() {
+  const M = S.M, rows = M.rows.filter((r) => inPeriod(r) && inChan(r)), idx = monthIdx();
+  const chansOf = new Map(); for (const r of M.rows) { let s = chansOf.get(r.line); if (!s) chansOf.set(r.line, s = new Set()); s.add(r.chan); }
+  const lines = groupBy(rows, 'line').map((a) => { a.chans = [...chansOf.get(a.key)]; a.bud = S.chan === 'All' || a.chans.length === 1 ? plan(M.budget, a.key, idx) : null; return a; });
+  const tot = sum(rows), tb = planSum(lines.map((l) => l.bud)); tot.bud = tb; tot.key = null;
+  const g = M.gr55, atClose = S.mode === 'ytd' && S.month === M.close && S.chan === 'All' && g['Gross Profit'] != null;
+  const extra = atClose ? `<div class="card kpi"><div class="k">Site gross profit, after absorption (GR55)</div><div class="v">${big(g['Gross Profit'])}</div><div class="s">${pctT(g['Gross Profit'] / g['Net Sales'])} of sales &nbsp; over/(under) absorbed overhead ${big(g['Over/(Under) Abs FOH'])}</div></div>` : '';
+  const cols = [
+    { h: 'Product line', l: 1, val: (r) => lineName(r.key), f: (r, t) => t ? 'Total' : `${esc(lineName(r.key))}${r.chans.map((c) => `<span class="tag">${esc(c)}</span>`).join('')}<span class="fin">Finance: ${esc(r.key)}</span>` },
+    { h: 'Net sales', val: (r) => r.ns, f: (r) => usd(r.ns) },
+    { h: 'Budget', val: (r) => r.bud && r.bud.ns, f: (r) => r.bud ? usd(r.bud.ns) : '<span class="mut">n/a</span>' },
+    { h: 'vs budget', val: (r) => r.bud ? r.ns - r.bud.ns : null, f: (r) => vari(r.ns, r.bud && r.bud.ns, 'rev') },
+    { h: 'CM %', val: (r) => r.cmp, f: (r) => pct(r.cmp), tip: 'Contribution margin: net sales less variable costs' },
+    { h: 'Gross profit', val: (r) => r.gm, f: (r) => usd(r.gm) },
+    { h: 'GM %', val: (r) => r.gmp, f: (r) => pct(r.gmp) },
+    { h: 'Budget GM %', val: (r) => r.bud && r.bud.gmp, f: (r) => r.bud ? pct(r.bud.gmp) : '<span class="mut">n/a</span>' },
+    { h: 'GM % vs budget', val: (r) => r.bud ? r.gmp - r.bud.gmp : null, f: (r) => vari(r.gmp, r.bud && r.bud.gmp, 'rev', true) },
+  ];
+  return controls() + kpis(tot, tb, extra) + charts(M.rows.filter(inChan), S.chan === 'All' ? Object.keys(LINES) : lines.filter((l) => l.bud).map((l) => l.key))
+    + `<div class="card"><h3>By product line, ${periodLabel()}</h3>${table('lines', cols, lines, { sort: { i: 1, d: -1 }, total: tot, click: (r) => `data-act="line" data-v="${esc(r.key)}"` })}<p class="note">Click a line for its full P&amp;L, programs, customers, parts and sales orders. F is favourable to budget, U is unfavourable.</p></div>`;
+}
+
+function vLine() {
+  const M = S.M, L = S.line, all = M.rows.filter((r) => r.line === L && inChan(r)), rows = all.filter(inPeriod), a = sum(rows), idx = monthIdx();
+  const b = plan(M.budget, L, idx), bfy = plan(M.budget, L, null, true), ffy = plan(M.forecast, L, null, true);
+  const p = (o, k) => o && o[k] != null ? usd(o[k]) : '<span class="mut">n/a</span>';
+  const pl = PL.filter(([k]) => k !== 'roy' || a.roy).map(([k, label, kind, , cls]) => `<tr class="${cls}"><td class="l">${label}</td><td>${usd(a[k])}</td><td>${a.ns ? pct(a[k] / a.ns) : ''}</td><td>${p(b, k)}</td><td>${b && b.ns && b[k] != null ? pct(b[k] / b.ns) : ''}</td><td>${vari(a[k], b && b[k], kind)}</td><td>${p(bfy, k)}</td><td>${p(ffy, k)}</td></tr>`).join('');
+  const q = S.q.toLowerCase(), hit = (r) => !q || [r.key, r.first.desc, r.first.cust, r.first.program].join(' ').toLowerCase().includes(q);
+  const subs = { programs: ['Programs', 'program', [{ h: 'Program (Finance label)', l: 1, val: (r) => r.key, f: (r) => esc(r.key || '(blank)') + `<span class="fin">${esc(r.first.group)}</span>` }]],
+    customers: ['Customers', 'cust', [{ h: 'Customer', l: 1, val: (r) => r.key, f: (r) => esc(r.key || '(no customer: journal or reserve)') }]],
+    parts: ['Parts', 'part', [{ h: 'Part', l: 1, val: (r) => r.key, f: (r) => esc(r.key || '(none)') + `<span class="fin">${esc(r.first.desc)}</span>` }, { h: 'Qty', val: (r) => r.qty, f: (r) => Math.round(r.qty).toLocaleString() }]],
+    orders: ['Sales orders', 'so', [{ h: 'Sales order', l: 1, val: (r) => r.key, f: (r) => esc(r.key || '(none)') + `<span class="fin">${esc(r.first.cust)}</span>` }, { h: 'Qty', val: (r) => r.qty, f: (r) => Math.round(r.qty).toLocaleString() }]] };
+  const sub = subs[S.sub], data = groupBy(rows, sub[1]).filter(hit);
+  const { act, bud } = monthly(all, [L]);
+  const mrow = (label, f) => `<tr><td class="l">${label}</td>${act.map((x, i) => `<td>${f(x, bud && bud[i])}</td>`).join('')}</tr>`;
+  return `<div class="crumb"><a data-act="tab" data-v="overview">All product lines</a> / </div><h2 class="t">${esc(lineName(L))}</h2><p class="note" style="margin:0 0 12px">Finance product line "${esc(L)}"${LINES[L] ? ', budget block "' + esc(LINES[L][0]) + '"' : ', no budget block mapped'}</p>`
+    + controls() + kpis(a, b) + charts(all, [L])
+    + `<div class="card" style="margin-bottom:12px"><h3>P&amp;L, ${periodLabel()}</h3><div class="tw"><table><thead><tr><th class="l">Line</th><th>Actual</th><th>% sales</th><th>Budget</th><th>% sales</th><th>vs budget</th><th>Full-year budget</th><th>Full-year forecast</th></tr></thead><tbody>${pl}</tbody></table></div>${b ? '' : '<p class="note">No budget comparison: this line has no block on the Budget tab, or a channel filter splits it.</p>'}</div>`
+    + `<div class="card" style="margin-bottom:12px"><h3>Month by month</h3><div class="tw"><table><thead><tr><th class="l"></th>${MON.map((m) => `<th>${m}</th>`).join('')}</tr></thead><tbody>${mrow('Net sales', (x) => x ? usd(x.ns) : '')}${mrow('Budget sales', (x, y) => y ? usd(y.ns) : '')}${mrow('Gross profit', (x) => x ? usd(x.gm) : '')}${mrow('GM %', (x) => x && x.ns > 0 ? pct(x.gmp) : '')}${mrow('Budget GM %', (x, y) => y && y.ns ? pct(y.gmp) : '')}</tbody></table></div></div>`
+    + `<div class="card"><div class="bar" style="margin-bottom:8px"><div class="seg">${Object.entries(subs).map(([k, v]) => `<button data-act="sub" data-v="${k}" class="${S.sub === k ? 'on' : ''}">${v[0]}</button>`).join('')}</div><input type="search" placeholder="Filter this list" value="${esc(S.q)}" data-act="q" /><span class="lbl">${data.length} rows, ${periodLabel()}</span></div>${table('sub-' + S.sub, moneyCols(sub[2]), data, { sort: { i: sub[2].length, d: -1 }, cap: 60 })}</div>`;
+}
+
+function vCustomers() {
+  const rows = S.M.rows.filter((r) => inPeriod(r) && inChan(r)), q = S.q.toLowerCase();
+  const data = groupBy(rows, 'cust').filter((r) => !q || r.key.toLowerCase().includes(q));
+  return controls() + `<div class="card"><div class="bar" style="margin-bottom:8px"><input type="search" placeholder="Find a customer" value="${esc(S.q)}" data-act="q" /><span class="lbl">${data.length} customers, ${periodLabel()}</span></div>${table('cust', moneyCols([{ h: 'Customer', l: 1, val: (r) => r.key, f: (r, t) => t ? 'Total' : esc(r.key || '(no customer: journals and reserves)') }]), data, { sort: { i: 1, d: -1 }, cap: 60, total: Object.assign(sum(rows), { key: '' }) })}</div>`;
+}
+function vWarranty() {
+  const M = S.M, rows = M.rw1.filter(inPeriod), tot = rows.reduce((s, r) => s + r.cos, 0);
+  const g = (key) => { const m = new Map(); for (const r of rows) { const k = r[key]; const a = m.get(k) || { key: k, cos: 0, n: 0, first: r }; a.cos += r.cos; a.n++; m.set(k, a); } return [...m.values()]; };
+  const c = (h, key) => [{ h, l: 1, val: (r) => r.key, f: (r) => esc(r.key || '(blank)') }, { h: 'Orders', val: (r) => r.n, f: (r) => r.n }, { h: 'Warranty cost', val: (r) => r.cos, f: (r) => usd(r.cos) }];
+  if (!M.rw1.length) return '<div class="card">No "ZFCAGP RW1 Detail" tab in this file.</div>';
+  return controls().replace(/<span class="lbl" style="margin-left:8px">Channel.*?<\/div><\/div>$/s, '</div>') + `<div class="grid kpis"><div class="card kpi"><div class="k">Non-billable warranty repair cost (order reason RW1)</div><div class="v">${big(tot)}</div><div class="s">${rows.length} line items, ${periodLabel()}</div></div></div>
+  <div class="grid two"><div class="card"><h3>By program</h3>${table('w-prog', c('Program', 'program'), g('program'), { sort: { i: 2, d: -1 } })}</div><div class="card"><h3>By customer</h3>${table('w-cust', c('Customer', 'cust'), g('cust'), { sort: { i: 2, d: -1 } })}</div></div>
+  <div class="card"><h3>Line items</h3>${table('w-rows', [{ h: 'Month', l: 1, val: (r) => r.m, f: (r) => mName(r.m) }, { h: 'Sales order', l: 1, val: (r) => r.so, f: (r) => esc(r.so) }, { h: 'Customer', l: 1, val: (r) => r.cust, f: (r) => esc(r.cust) }, { h: 'Part', l: 1, val: (r) => r.part, f: (r) => esc(r.part) + `<span class="fin">${esc(r.desc)}</span>` }, { h: 'Warranty WBS', l: 1, val: (r) => r.wbs, f: (r) => esc(r.wbs || 'not mapped') }, { h: 'Cost', val: (r) => r.cos, f: (r) => usd(r.cos) }], rows, { sort: { i: 5, d: -1 }, cap: 60 })}</div>`;
+}
+
+function checks() {
+  const M = S.M, out = [], rows = M.rows, t = sum(rows), g = M.gr55, has = Object.keys(g).length > 0;
+  const push = (lvl, title, detail) => out.push({ lvl, title, detail });
+  if (has) { const dS = t.ns - (g['Net Sales'] || 0), dG = t.gm - (g['GP before Abs FOH'] || 0); push(Math.abs(dS) < 1 && Math.abs(dG) < 1 ? 'ok' : 'bad', 'Detail ties to the general ledger (GR55)', `Net sales differ by ${big(dS)}, gross profit before absorption by ${big(dG)}.`); }
+  else push('warn', 'No CO Summary values found', 'The tie-out to GR55 cannot be shown.');
+  if (M.statedClose && M.statedClose !== M.months[M.months.length - 1]) push('warn', 'Close month on the detail tab does not match the data', `The tab says ${mName(M.statedClose)}, the latest line items are ${mName(M.months[M.months.length - 1])}.`);
+  const nl = rows.filter((r) => r.line === '(no product line)'); if (nl.length) push('bad', nl.length + ' line items have no product line', 'Net sales ' + big(sum(nl).ns) + '. They roll up nowhere on the Finance tabs.');
+  const un = [...new Set(rows.map((r) => r.line))].filter((l) => !LINES[l]); if (un.length) push('warn', 'Product lines with no budget block mapped', un.join(', ') + '. Add them to LINES in this file.');
+  const names = new Map(); for (const r of rows) { if (r.line === 'Aftermarket' || r.line === 'Miscellaneous' || !r.program) continue; let s = names.get(r.line); if (!s) names.set(r.line, s = new Map()); s.set(r.program, (s.get(r.program) || 0) + r.ns); }
+  const multi = [...names].filter(([l, s]) => s.size > 1 && l !== 'GE PP20');
+  if (multi.length) push('warn', 'Same program booked under more than one name', multi.map(([l, s]) => lineName(l) + ': ' + [...s].map(([n, v]) => `"${n}" ${big(v)}`).join(', ')).join('. ') + '. Finance tabs that look a program up by name (PM Review) only pick up the first name, so they understate it. This page rolls up by product line instead.');
+  const stray = groupBy(rows.filter((r) => r.line === 'Miscellaneous' && r.program && r.program !== 'Miscellaneous'), 'program'); if (stray.length) push('warn', 'Named programs sitting in Miscellaneous', stray.map((s) => `"${s.key}" ${big(s.ns)} sales in ${s.n} items`).join(', ') + '. The program label and the product hierarchy disagree.');
+  const bad = rows.filter((r) => Math.abs(r.fCM - (r.ns - r.vc)) > 1 || Math.abs(r.fGM - (r.ns - r.cos)) > 1); if (bad.length) push('warn', bad.length + ' line items where the margin column does not equal sales less cost', 'Largest gap ' + big(Math.max(...bad.map((r) => Math.max(Math.abs(r.fCM - (r.ns - r.vc)), Math.abs(r.fGM - (r.ns - r.cos)))))) + '. This page recomputes margins from sales and cost.');
+  for (const [nm, src] of [['Budget', M.budget], ['Forecast', M.forecast]]) {
+    if (!src) { push('warn', nm + ' tab not found', 'No comparison available.'); continue; }
+    const yr = M.close.slice(0, 4), wrong = src.months.map((m, i) => m && m !== yr + '-' + String(i + 1).padStart(2, '0') ? MON[i] + ' is dated ' + m : null).filter(Boolean);
+    if (wrong.length) push('warn', nm + ' tab has wrong month headers', wrong.join(', ') + '. The PM Review tab looks budgets up by date, so those months will fail there. This page reads the columns by position.');
+  }
+  if (M.forecast) { const lastAct = M.forecast.flags.lastIndexOf('ACTUAL'), ci = +M.close.slice(5) - 1; if (lastAct < ci) push('warn', 'Forecast tab is not rolled forward', `It holds actuals through ${lastAct >= 0 ? MON[lastAct] : 'no month'} while the close is ${MON[ci]}. Full-year forecast figures are the forecast as of then.`); }
+  const rw = rows.filter((r) => r.reason === 'RW1').length; if (rw && M.rw1.length) push('ok', 'Warranty orders (RW1) are in both tabs', `${rw} in the detail, ${M.rw1.length} on the RW1 tab. Their cost is inside the totals above and listed on the Warranty view.`);
+  return out;
+}
+function vChecks() {
+  const M = S.M, t = sum(M.rows), g = M.gr55, ico = { ok: '✓', warn: '!', bad: '✕' };
+  const tie = [['Net sales', 'ns', 'Net Sales'], ['Material', 'mat', 'Material'], ['Labor', 'lab', 'Labor'], ['Variable material burden', 'vmb', 'Variable Matl Burden'], ['Variable overhead', 'voh', 'Variable Overhead'], ['NRE amortization', 'nreA', 'NRE Amortization'], ['NRE reimbursement', 'nreR', 'NRE Reimbursement'], ['Contract accounting adjustments', 'caa', 'Contract Acctg Adjs'], ['Inventory reserve', 'inv', 'Inventory Reserve'], ['Warranty', 'war', 'Warranty'], ['Fixed material burden', 'fmb', 'Fixed Matl Burden'], ['Fixed overhead', 'foh', 'Fixed Overhead'], ['Cost of sales before absorption', 'cos', 'COGS before Abs FOH'], ['Gross profit before absorption', 'gm', 'GP before Abs FOH']];
+  const tr = tie.map(([l, k, gk]) => { const gv = g[gk] == null ? null : Math.abs(g[gk]) * (k === 'gm' && g[gk] < 0 ? -1 : 1), d = gv == null ? null : t[k] - gv; return `<tr class="${k === 'gm' || k === 'cos' ? 'sub' : ''}"><td class="l">${l}</td><td>${usd(t[k])}</td><td>${usd(gv)}</td><td>${d == null ? '' : Math.abs(d) < 1 ? '<span class="pos">ties</span>' : usd(d)}</td></tr>`; }).join('');
+  const after = ['Over/(Under) Abs FOH', 'Total COGS', 'Gross Profit'].map((k) => `<tr><td class="l">${k}</td><td class="mut">not in detail</td><td>${usd(g[k])}</td><td></td></tr>`).join('');
+  return `<div class="grid two"><div class="card"><h3>Checks run on this file</h3>${checks().map((c) => `<div class="chk"><span class="i ${c.lvl}">${ico[c.lvl]}</span><b>${esc(c.title)}</b><span class="d">${esc(c.detail)}</span></div>`).join('')}</div>
+  <div class="card"><h3>Tie-out: SAP line items vs general ledger, cumulative to ${mName(M.close)}</h3><div class="tw"><table><thead><tr><th class="l"></th><th>ZFCAGP detail</th><th>GR55 (CO Summary)</th><th>Difference</th></tr></thead><tbody>${tr}${after}</tbody></table></div><p class="note">Totals tie; small differences inside the cost lines are the reclass Finance books by journal. Program margins on this page stop at gross profit before absorption: over or under absorbed overhead is only known for the site.</p></div></div>
+  <div class="card" style="margin-top:12px"><h3>Where the numbers come from</h3><ol class="flow">
+  <li><b>SAP report ZFCAGP</b> (gross profit by WBS and sales order) is exported each close and pasted into the <code>ZFCAGP Detail</code> tab: one row per billing or journal line with sales, every cost bucket, customer, part, sales order, product hierarchy and program. This is the only source of actuals. This page reads that tab and nothing else for actuals.</li>
+  <li>Three helper columns are added on the left: month, channel (40 OEM, 41 AMS, 42 Military) and <b>product line</b>, the roll-up that matches the budget blocks.</li>
+  <li>Warranty repair orders (order reason RW1) are copied to <code>ZFCAGP RW1 Detail</code> and mapped to a warranty WBS.</li>
+  <li>Fourteen pivot tables re-cut the same rows: by program, by customer, by channel and program with the cost split, by sales order, by month, aftermarket by project. This page replaces all of them with one filterable view.</li>
+  <li><b>SAP report GR55</b> (the ledger income statement) is keyed into <code>CO Summary</code> to prove the detail ties to the books and to add over or under absorbed overhead.</li>
+  <li><code>Budget</code> and <code>Forecast</code> hold one block per product line by month. This page sums them over the same months as the actuals, so year to date is compared with year to date.</li></ol>
+  <p class="note">Tabs in the loaded file: ${M.tabs.map(esc).join(', ')}</p></div>`;
+}
+
+function render() {
+  if (!S.M) { $app.innerHTML = `<header class="top"><h1>GPNL Margin View</h1></header><div class="drop" id="drop"><h2>Drop the NTR YTD GPNL workbook here</h2><p>Use the .xlsx Finance sends at month close. It is read in this browser only; nothing is uploaded. The page rebuilds every report tab from the SAP line items and compares them with budget.</p><p><button class="btn primary" data-act="open">Choose file</button></p><div class="status">${esc(S.status)}</div></div>`; return; }
+  const M = S.M, tabs = [['overview', 'Overview'], ['customers', 'Customers'], ['warranty', 'Warranty'], ['checks', 'Checks and source']];
+  const body = S.tab === 'line' && S.line ? vLine() : S.tab === 'customers' ? vCustomers() : S.tab === 'warranty' ? vWarranty() : S.tab === 'checks' ? vChecks() : vOverview();
+  const warn = checks().filter((c) => c.lvl !== 'ok').length;
+  $app.innerHTML = `<header class="top"><h1>GPNL Margin View</h1><span class="src">${esc(M.file)} &nbsp;|&nbsp; closed through ${mName(M.close)} &nbsp;|&nbsp; ${M.rows.length.toLocaleString()} line items</span><span class="sp"></span><span class="status" style="margin:0">${esc(S.status)}</span><button class="btn" data-act="open">Load new month</button><button class="btn" data-act="save" title="Download data/gpnl.local.js so the page opens with this data for anyone using the same folder">Save data file</button><button class="btn" data-act="clear">Clear</button></header>
+  <nav class="tabs">${tabs.map(([k, l]) => `<a data-act="tab" data-v="${k}" class="${S.tab === k || (k === 'overview' && S.tab === 'line') ? 'on' : ''}">${l}${k === 'checks' && warn ? ` <span class="tag warn">${warn}</span>` : ''}</a>`).join('')}</nav>${body}`;
+}
+
+/* ---------- 6. Loading, saving, events ---------- */
+const DB = { open: () => new Promise((res, rej) => { const r = indexedDB.open('gpnl-view', 1); r.onupgradeneeded = () => r.result.createObjectStore('kv'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }),
+  async set(v) { try { const db = await DB.open(); const tx = db.transaction('kv', 'readwrite'); v == null ? tx.objectStore('kv').delete('model') : tx.objectStore('kv').put(v, 'model'); } catch (e) { /* storage blocked: page still works for this session */ } },
+  async get() { try { const db = await DB.open(); return await new Promise((res) => { const r = db.transaction('kv').objectStore('kv').get('model'); r.onsuccess = () => res(r.result || null); r.onerror = () => res(null); }); } catch (e) { return null; } } };
+function use(M) { S.M = M; S.month = M.close; S.mode = 'ytd'; S.tab = 'overview'; S.status = ''; render(); }
+async function load(file) {
+  const say = (t) => { S.status = t; const el = document.querySelector('.status'); if (el) el.textContent = t; };
+  try { say('Reading ...'); await new Promise((r) => setTimeout(r, 30)); const M = await buildModel(file, say); await DB.set(M); use(M); }
+  catch (e) { say('Could not read that file: ' + e.message); console.error(e); }
+}
+document.getElementById('file').addEventListener('change', (e) => { if (e.target.files[0]) load(e.target.files[0]); e.target.value = ''; });
+document.addEventListener('dragover', (e) => { e.preventDefault(); const d = document.getElementById('drop'); if (d) d.classList.add('over'); });
+document.addEventListener('dragleave', () => { const d = document.getElementById('drop'); if (d) d.classList.remove('over'); });
+document.addEventListener('drop', (e) => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) load(f); });
+document.addEventListener('click', (e) => {
+  const el = e.target.closest('[data-act]'); if (!el) return; const a = el.dataset.act, v = el.dataset.v;
+  if (a === 'open') return document.getElementById('file').click();
+  if (a === 'clear') { if (confirm('Remove the loaded GPNL data from this browser?')) { DB.set(null); S.M = null; S.status = ''; render(); } return; }
+  if (a === 'save') { const blob = new Blob(['window.GPNL_DATA = ' + JSON.stringify(S.M) + ';\n'], { type: 'text/javascript' }); const u = URL.createObjectURL(blob), l = document.createElement('a'); l.href = u; l.download = 'gpnl.local.js'; l.click(); URL.revokeObjectURL(u); return; }
+  if (a === 'tab') { S.tab = v; S.q = ''; }
+  else if (a === 'mode') S.mode = v;
+  else if (a === 'chan') S.chan = v;
+  else if (a === 'month') { S.month = el.dataset.m; }
+  else if (a === 'line') { S.line = v; S.tab = 'line'; S.q = ''; window.scrollTo(0, 0); }
+  else if (a === 'sub') { S.sub = v; S.q = ''; }
+  else if (a === 'all') S.all[el.dataset.id] = true;
+  else if (a === 'sort') { const id = el.dataset.id, i = +el.dataset.i, cur = S.sort[id]; S.sort[id] = { i, d: cur && cur.i === i ? -cur.d : (el.classList.contains('l') ? 1 : -1) }; }
+  else return;
+  render();
+});
+document.addEventListener('change', (e) => { if (e.target.dataset.act === 'pick') { S.month = e.target.value; render(); } });
+document.addEventListener('input', (e) => { if (e.target.dataset.act === 'q') { S.q = e.target.value; const pos = e.target.selectionStart; render(); const n = document.querySelector('[data-act=q]'); if (n) { n.focus(); n.setSelectionRange(pos, pos); } } });
+const tip = document.getElementById('tip');
+document.addEventListener('mousemove', (e) => { const t = e.target.closest && e.target.closest('[data-tip]'); if (!t) { tip.style.display = 'none'; return; } tip.textContent = t.dataset.tip; tip.style.display = 'block'; tip.style.left = Math.min(e.clientX + 14, innerWidth - tip.offsetWidth - 8) + 'px'; tip.style.top = (e.clientY + 14) + 'px'; });
+(async () => { render(); const M = window.GPNL_DATA || await DB.get(); if (M && M.v === 1) use(M); })();
+</script>
+</body>
+</html>

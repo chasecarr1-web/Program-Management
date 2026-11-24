@@ -1,0 +1,18 @@
+---
+import { site } from '../data/site';
+const path = Astro.url.pathname;
+const isHome = path === '/';
+const links = [
+  { href: '/#programs', label: 'Programs' },
+  { href: '/#week', label: 'Rhythm' },
+  { href: '/#contact', label: 'Contact' },
+];
+---
+<header class="frame" data-frame>
+  <a class="frame__name draw" href="/">{site.name}</a>
+  <nav aria-label="Main">
+    <ul class="frame__nav" role="list" style="list-style:none;padding:0">
+      {links.map((l) => <li><a class="draw" href={l.href} aria-current={!isHome && l.label === 'Programs' && path.startsWith('/work/') ? 'page' : undefined}>{l.label}</a></li>)}
+    </ul>
+  </nav>
+</header>
