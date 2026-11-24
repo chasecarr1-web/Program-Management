@@ -33,6 +33,21 @@ user and a timestamp.
 **Reports and data:** program status report (print/PDF or HTML), CSV export, a six-sheet Excel
 workbook (register, approvals, financial, actions, risks, configuration), and JSON backup/restore.
 
+## GPNL Margin View (`gpnl.html`)
+
+A separate single-file page for Finance's monthly "NTR YTD GPNL" workbook. Open `gpnl.html`, drop the
+.xlsx on it, and it rebuilds every report tab from the SAP line-item tab (`ZFCAGP Detail`): gross
+profit by product line, program, customer, part and sales order, month or year to date, against the
+Budget and Forecast tabs, with the tie-out to the ledger (`CO Summary`) and a list of data checks.
+
+- The workbook is read in the browser with a built-in .xlsx reader. Nothing is uploaded and there are
+  no dependencies.
+- The last file loaded is remembered in that browser (IndexedDB). **Save data file** downloads
+  `gpnl.local.js`; put it in `data/` and the page opens with that data. `data/*.local.js` is
+  git-ignored: this repo is public, so never commit financial data.
+- Product lines map to budget blocks in the `LINES` table near the top of the script. A new product
+  line shows up under Checks until it is added there.
+
 ## Data and workspaces
 
 - **Demo (sample data)**: fictional records generated relative to today's date.
